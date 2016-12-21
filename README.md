@@ -5,7 +5,7 @@ at <http://annexia.org/forth>.
 
 ## What is this ?
 
-Jonesforth-ARM is a Forth interpreter developed for ARM.
+Jonesforth-ARM is a Forth interpreter developed for ARMм7 Odroid X2 (Cortex-A9, Exynos 4412).
 
 The algorithm for our unsigned DIVMOD instruction is extracted from 'ARM
 Software Development Toolkit User Guide v2.50' published by ARM in 1997-1998
