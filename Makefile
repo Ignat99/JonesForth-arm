@@ -26,7 +26,7 @@ WARNFLAGS := -Wall -Werror -Wno-missing-prototypes -Wno-unused-macros -Wno-bad-f
 LDFLAGS := -nostdlib -nostdinc -nodefaultlibs -nostartfiles -T $(LSCRIPT)
 ASFLAGS := $(BASEFLAGS) $(WARNFLAGS) -x assembler-with-cpp 
 OCFLAGS := --target elf32-littlearm --set-section-flags .bss=contents,alloc,load -O binary
-CFLAGS := -std=c99 -nostdlib -static -fno-builtin -ffreestanding -fomit-frame-pointer $(BUILD_ID_NONE) $(DEFINES) $(BASEFLAGS) $(WARNFLAGS) $(INCLUDE)
+CFLAGS := -DBBB=1 -std=c99 -nostdlib -static -fno-builtin -ffreestanding -fomit-frame-pointer $(BUILD_ID_NONE) $(DEFINES) $(BASEFLAGS) $(WARNFLAGS) $(INCLUDE)
 
 ifeq ($(BBB), 1)
 	CFLAGS += -DBBB=1

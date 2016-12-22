@@ -236,6 +236,31 @@ defcode "EXIT",4,,EXIT
         POPRSP RIP
         NEXT
 
+@ Divide
+@ ( n0 n1 -- n2 )
+defcode "/",1,,slash
+  pop     r0
+  mov     r1, DSP
+  bl      _slash_
+  mov     DSP, r0
+  NEXT
+
+defcode "_/_",3,,_slash_
+#if BBB
+  vmov    s0, r0
+  vcvt.f64.u32 d0, s0
+  vmov    s2, r1
+  vcvt.f64.u32 d1, s2
+
+  vdiv.f64     d0, d0, d1
+  vcvt.u32.f64 s0, d0
+
+  vmov    r0, s0
+#else
+  udiv    r0, r0, r1
+#endif
+  bx      lr
+
 @ DIVMOD computes the unsigned integer division and remainder
 @ The implementation is based upon the algorithm extracted from 'ARM Software
 @ Development Toolkit User Guide v2.50' published by ARM in 1997-1998
