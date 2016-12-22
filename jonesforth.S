@@ -34,10 +34,13 @@
 @ DSP (r13) points to the top of the data stack
 @ RSP (r11) points to the top of the return stack
 @ IP (r10) points to the next forth word that will be executed
+@        #define DSP r13
+@        #define RSP r11
+@        #define IP r10
 
-        #define DSP r13
-        #define RSP r11
-        #define IP r10
+DSP	.req r13
+RIP	.req r10
+RSP	.req r11
 
 @ Define stdin, stdout, stderr file descriptors numbers
 
@@ -47,12 +50,12 @@
 
 @ Implement NEXT, which:
 @   1. finds the address of the forth word to execute by
-@      dereferencing the IP
-@   2. increment IP
+@      dereferencing the RIP
+@   2. increment RIP
 @   3. executes the forth word
 
         .macro NEXT
-        ldr r0, [IP], #4
+        ldr r0, [RIP], #4
         ldr r1, [r0]
         bx r1
         .endm
@@ -78,28 +81,34 @@
 
 @ DOCOL is the assembly subroutine that is called
 @ at the start of every forth word execution.
-@ It saves the old IP on the return stack, and
-@ makes IP point to the first codeword.
+@ It saves the old RIP on the return stack, and
+@ makes RIP point to the first codeword.
 @ Then it calls NEXT to start interpreting the word.
 
         .text
-        .align 2
+	.code 32
+@        .align 2
+	.balign 4
 DOCOL:
-        PUSHRSP IP
-        add IP, r0, #4
+        PUSHRSP RIP
+        add RIP, r0, #4
         NEXT
 
 @ _start is the program entry point
 
         .text
-        .align 2
+	.code 32
+@        .align 2
         .global _start
+	.balign 4
 _start:
+@ Enable the vfpu
+  	bl      _enable_vfpu_
         ldr r0, =var_S0
         str DSP, [r0]           @ Save the original stack position in var_S0
         ldr RSP, =return_stack_top      @ Set the initial return stack position
         bl  set_up_data_segment         @ Set up the data segment
-        ldr IP, =cold_start             @ Make the IP point to cold_start
+        ldr RIP, =cold_start             @ Make the RIP point to cold_start
         NEXT                            @ Start the interpreter
 
 
@@ -108,8 +117,26 @@ _start:
 
         .set INITIAL_DATA_SEGMENT_SIZE,65536
         .text
-        .align 2
+@	.align 2
+	.balign 4
+	.ltorg
+_enable_vfpu_:
 
+@ CPACR: Allow full (PL0 & PL1) access to coprocessors 10 & 11 (VFPU) 
+  mrc     p15, 0, r2, c1, c0, 2
+@  mov     r3, #0xf
+@  orr     r2, r2, r3, lsl #20
+@  mcr     p15, 0, r2, c1, c0, 2
+  isb
+
+@ Enable the VFPU
+@  vmrs    r2, FPSCR
+@  mov     r3, #1
+@  orr     r2, r2, r3, lsl #30
+@  vmsr    FPSCR, r2
+
+  bx      lr
+@	.align 2
 set_up_data_segment:
 
         mov r1, #0
@@ -148,14 +175,16 @@ cold_start:
 
         .macro defword name, namelen, flags=0, label
         .section .rodata
-        .align 2
+@        .align 2
+	.balign 4
         .global name_\label
 name_\label :
         .int link               @ link
         .set link,name_\label
         .byte \flags+\namelen   @ flags + length byte
         .ascii "\name"          @ the name
-        .align 2                @ padding to next 4 byte boundary
+@        .align 2                @ padding to next 4 byte boundary
+	.balign 4
         .global \label
 \label :
         .int DOCOL              @ codeword - the interpreter
@@ -166,14 +195,16 @@ name_\label :
 
         .macro defcode name, namelen, flags=0, label
         .section .rodata
-        .align 2
+@        .align 2
+	.balign 4
         .globl name_\label
 name_\label :
         .int link               @ link
         .set link,name_\label
         .byte \flags+\namelen   @ flags + length byte
         .ascii "\name"          @ the name
-        .align 2                @ padding to next 4 byte boundary
+@        .align 2                @ padding to next 4 byte boundary
+	.balign 4
         .global \label
 \label :
         .int code_\label        @ codeword
@@ -190,7 +221,8 @@ code_\label :                   @ assembler code follows
         push r0
         NEXT
         .data
-        .align 2
+@        .align 2
+	.balign 4
 var_\name :
         .int \initial
         .endm
@@ -205,11 +237,11 @@ var_\name :
         .endm
 
 @ EXIT is the last codeword of a forth word.
-@ It restores the IP and returns to the caller using NEXT.
+@ It restores the RIP and returns to the caller using NEXT.
 @ (See DOCOL)
 
 defcode "EXIT",4,,EXIT
-        POPRSP IP
+        POPRSP RIP
         NEXT
 
 @ DIVMOD computes the unsigned integer division and remainder
@@ -560,7 +592,7 @@ defcode "INVERT",6,,INVERT
 @ into the stack and skips it (since the literal is not executable).
 
 defcode "LIT", 3,, LIT
-        ldr r1, [IP], #4
+        ldr r1, [RIP], #4
         push r1
         NEXT
 
@@ -1107,15 +1139,15 @@ defword "HIDE",4,,HIDE
 @ only works in compile mode. Implementation is identical to LIT.
 
 defcode "'",1,,TICK
-        ldr r1, [IP], #4
+        ldr r1, [RIP], #4
         push r1
         NEXT
 
 @ BRANCH ( -- ) changes IP by offset which is found in the next codeword
 
 defcode "BRANCH",6,,BRANCH
-        ldr r1, [IP]
-        add IP, IP, r1
+        ldr r1, [RIP]
+        add RIP, RIP, r1
         NEXT
 
 @ 0BRANCH ( p -- ) branch if the top of the stack is zero
@@ -1124,18 +1156,18 @@ defcode "0BRANCH",7,,ZBRANCH
         pop r0
         cmp r0, #0              @ if the top of the stack is zero
         beq code_BRANCH         @ then branch
-        add IP, IP, #4          @ else, skip the offset
+        add RIP, RIP, #4          @ else, skip the offset
         NEXT
 
 @ LITSTRING ( -- ) as LIT but for strings
 
 defcode "LITSTRING",9,,LITSTRING
-        ldr r0, [IP], #4        @ read length
-        push IP                 @ push address
+        ldr r0, [RIP], #4        @ read length
+        push RIP                 @ push address
         push r0                 @ push string
-        add IP, IP, r0          @ skip the string
-        add IP, IP, #3          @ find the next 4-byte boundary
-        and IP, IP, #~3
+        add RIP, RIP, r0          @ skip the string
+        add RIP, RIP, #3          @ find the next 4-byte boundary
+        and RIP, RIP, #~3
         NEXT
 
 @ TELL ( addr length -- ) writes a string to stdout
@@ -1210,7 +1242,7 @@ defcode "INTERPRET",9,,INTERPRET
 
                                         @ not a literal, execute now
         ldr r1, [r0]                    @ (it's important here that
-        bx r1                           @  IP address in r0, since DOCOL
+        bx r1                           @  RIP address in r0, since DOCOL
                                         @  assummes it)
 
 5:  @ Push literal on the stack
