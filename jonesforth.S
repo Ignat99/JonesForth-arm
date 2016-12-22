@@ -87,7 +87,6 @@ RSP	.req r11
 
         .text
 	.code 32
-@        .align 2
 	.balign 4
 DOCOL:
         PUSHRSP RIP
@@ -98,12 +97,12 @@ DOCOL:
 
         .text
 	.code 32
-@        .align 2
-        .global _start
 	.balign 4
+        .global _start
 _start:
 @ Enable the vfpu
   	bl      _enable_vfpu_
+
         ldr r0, =var_S0
         str DSP, [r0]           @ Save the original stack position in var_S0
         ldr RSP, =return_stack_top      @ Set the initial return stack position
@@ -117,13 +116,12 @@ _start:
 
         .set INITIAL_DATA_SEGMENT_SIZE,65536
         .text
-@	.align 2
 	.balign 4
 	.ltorg
 _enable_vfpu_:
 
 @ CPACR: Allow full (PL0 & PL1) access to coprocessors 10 & 11 (VFPU) 
-  mrc     p15, 0, r2, c1, c0, 2
+@  mrc     p15, 0, r2, c1, c0, 2
 @  mov     r3, #0xf
 @  orr     r2, r2, r3, lsl #20
 @  mcr     p15, 0, r2, c1, c0, 2
@@ -136,7 +134,6 @@ _enable_vfpu_:
 @  vmsr    FPSCR, r2
 
   bx      lr
-@	.align 2
 set_up_data_segment:
 
         mov r1, #0
@@ -175,7 +172,6 @@ cold_start:
 
         .macro defword name, namelen, flags=0, label
         .section .rodata
-@        .align 2
 	.balign 4
         .global name_\label
 name_\label :
@@ -183,8 +179,7 @@ name_\label :
         .set link,name_\label
         .byte \flags+\namelen   @ flags + length byte
         .ascii "\name"          @ the name
-@        .align 2                @ padding to next 4 byte boundary
-	.balign 4
+        .balign 4               @ padding to next 4 byte boundary
         .global \label
 \label :
         .int DOCOL              @ codeword - the interpreter
@@ -195,7 +190,6 @@ name_\label :
 
         .macro defcode name, namelen, flags=0, label
         .section .rodata
-@        .align 2
 	.balign 4
         .globl name_\label
 name_\label :
@@ -203,8 +197,7 @@ name_\label :
         .set link,name_\label
         .byte \flags+\namelen   @ flags + length byte
         .ascii "\name"          @ the name
-@        .align 2                @ padding to next 4 byte boundary
-	.balign 4
+        .balign 4                @ padding to next 4 byte boundary
         .global \label
 \label :
         .int code_\label        @ codeword
@@ -221,7 +214,6 @@ code_\label :                   @ assembler code follows
         push r0
         NEXT
         .data
-@        .align 2
 	.balign 4
 var_\name :
         .int \initial
