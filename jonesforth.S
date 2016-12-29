@@ -100,6 +100,7 @@ DOCOL:
 	.balign 4
         .global _start
 _start:
+
 @ Enable the vfpu
   	bl      _enable_vfpu_
 
@@ -121,17 +122,26 @@ _start:
 _enable_vfpu_:
 
 @ CPACR: Allow full (PL0 & PL1) access to coprocessors 10 & 11 (VFPU) 
-@  mrc     p15, 0, r2, c1, c0, 2
-@  mov     r3, #0xf
-@  orr     r2, r2, r3, lsl #20
-@  mcr     p15, 0, r2, c1, c0, 2
+@ Clear the ASEDIS bit in the CPACR
+@	ldr	r0, =(0xF << 20)
+@	mcr	p15, 0, r0, c1, c0, 2
+@ Set the FPEXC EN bit to enable the FPU:
+@	mov	r3, #0x40000000
+@	vmsr	FPEXC, r3
+@@  mrc     p15, 0, r2, c1, c0, 2
+@	mrc     p15, 0, r0, c1, c1, 2
+@@  mov     r3, #0xf
+@@  orr     r2, r2, r3, lsl #20
+@	orr	r0, r0, #3<<10
+@@  mcr     p15, 0, r2, c1, c0, 2
+@	mcr	p15, 0, r0, c1, c1, 2
   isb
 
 @ Enable the VFPU
-@  vmrs    r2, FPSCR
+@  vmrs    r2, FPEXC
 @  mov     r3, #1
 @  orr     r2, r2, r3, lsl #30
-@  vmsr    FPSCR, r2
+@  vmsr    FPEXC, r2
 
   bx      lr
 set_up_data_segment:
@@ -228,6 +238,16 @@ var_\name :
         NEXT
         .endm
 
+defcode "HELLO",5,,HELLO
+	mov r0, #1			@ STDOUT
+	adr r1, msgtxt			@ Address
+	mov r2, #12			@ Length
+	mov r7, #4			@ sys_write
+	svc #0
+	NEXT
+	.balign 4
+msgtxt: .ascii "Hello World\n"
+
 @ EXIT is the last codeword of a forth word.
 @ It restores the RIP and returns to the caller using NEXT.
 @ (See DOCOL)
@@ -238,7 +258,7 @@ defcode "EXIT",4,,EXIT
 
 @ Divide
 @ ( n0 n1 -- n2 )
-defcode "/",1,,slash
+defcode "%",1,,slash
   pop     r0
   mov     r1, DSP
   bl      _slash_

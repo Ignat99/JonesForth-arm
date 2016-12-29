@@ -20,7 +20,7 @@ LSCRIPT := linker.ld
 
 BUILD_ID_NONE := -Wl,--build-id=none
 #BUILD_ID_NONE :=
-BASEFLAGS := -g -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard 
+BASEFLAGS := -g -mcpu=cortex-a9 -mfpu=vfp -mfloat-abi=hard 
 WARNFLAGS := -Wall -Werror -Wno-missing-prototypes -Wno-unused-macros -Wno-bad-function-cast -Wno-sign-conversion
 # CFLAGS := -std=c99 -fno-builtin -ffreestanding -fomit-frame-pointer $(DEFINES) $(BASEFLAGS) $(WARNFLAGS) $(INCLUDE)
 LDFLAGS := -nostdlib -nostdinc -nodefaultlibs -nostartfiles -T $(LSCRIPT)
